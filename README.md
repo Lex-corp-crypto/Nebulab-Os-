@@ -41,7 +41,7 @@ You can run **3 or 4 devices (and even more)** simultaneously:
 └──────────────┘             └──────────────┘             └──────────────┘             └──────────────┘
 ```
 ---
-## 🚀 Quick Start in 1 Command (On your Pop!_OS PC)
+## 🚀 Quick Start in 1 Command (On your Linux PC – example: Pop!_OS)
 
 ### Option A: Instant Local Launch (Zero‑Docker)
 To start immediately the Master API, the Web interface and the local Agent:
@@ -232,7 +232,7 @@ Vous pouvez faire tourner vos **3 ou 4 appareils (et bien plus) tous en même te
 └──────────────┘             └──────────────┘             └──────────────┘             └──────────────┘
 ```
 ---
-## 🚀 Démarrage Rapide en 1 Commande (Sur votre PC Pop!_OS)
+## 🚀 Démarrage Rapide en 1 Commande (Sur votre PC Linux – exemple : Pop!_OS)
 
 ### Option A : Lancement Local Instantané (Zero-Docker)
 Pour démarrer immédiatement le Master API, l'interface Web et l'Agent local :
@@ -258,7 +258,7 @@ docker compose up -d
 ---
 ## 🧪 Guide de Connexion Rapide (Zéro Saisie d'IP / Zéro Port)
 
-### 1. Appareil #1 : PC sous Pop!_OS (Master + Nœud Principal)
+### 1. Appareil #1 : PC sous Linux (exemple : Pop!_OS) (Master + Nœud Principal)
 Sur votre PC Master :
 ```bash
 ./run_local.sh
