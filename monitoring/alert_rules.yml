@@ -1,0 +1,22 @@
+groups:
+  - name: nebulalab_cluster_alerts
+    rules:
+      # Alerte Nœud Hors Ligne
+      - alert: NodeOffline
+        expr: nebulalab_active_nodes < 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Tous les nœuds du cluster sont hors-ligne !"
+          description: "Aucun agent actif détecté depuis 30 secondes."
+
+      # Alerte HTTP Erreurs
+      - alert: HighHttpErrorRate
+        expr: rate(nebulalab_http_requests_total{status=~"5.."}[1m]) > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux élevé d'erreurs 5xx sur l'API"
+          description: "Plus de 5% des requêtes HTTP échouent."

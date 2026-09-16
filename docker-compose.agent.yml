@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # NebulaLab Agent pour Nœud distant (Ubuntu, Pop!_OS, Debian, etc.)
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: nebulalab_agent
+    restart: unless-stopped
+    network_mode: host  # Permet une découverte mDNS/UDP native et la vraie surveillance IP de la machine hôte
+    environment:
+      - HOSTNAME=${HOSTNAME:-ubuntu-node}
+      - API_URL=${API_URL}  # Laissez vide pour auto-découverte mDNS/UDP, ou spécifiez http://192.168.1.X:8000
+      - METRICS_INTERVAL=5
+      - HEARTBEAT_INTERVAL=10
+      - AGENT_TAGS=worker,ubuntu
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data

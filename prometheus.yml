@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'distributed_lab_api'
+    static_configs:
+      - targets: ['api:8000']
+    metrics_path: /metrics
+    scheme: http
+
+  # Optionally, you can also scrape the agent if you expose /metrics there
+  # - job_name: 'distributed_lab_agent'
+  #   static_configs:
+  #     - targets: ['<agent_host>:8000']  # you would need to expose agent's metrics
+  #   metrics_path: /metrics
+  #   scheme: http

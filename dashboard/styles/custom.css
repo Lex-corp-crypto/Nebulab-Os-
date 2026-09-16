@@ -1,0 +1,49 @@
+/**
+ * NebulaLab OS - Custom Cyber & Glassmorphism Styling
+ */
+
+:root {
+    --bg-main: #070a12;
+    --card-bg: rgba(20, 29, 51, 0.6);
+    --border-color: rgba(255, 255, 255, 0.07);
+    --primary: #6366f1;
+    --accent: #38bdf8;
+    --success: #10b981;
+    --danger: #f43f5e;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: #e2e8f0;
+}
+
+.glass-panel {
+    background: rgba(13, 19, 34, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+}
+
+.glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(99, 102, 241, 0.1);
+}
+
+.pulse-online {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-ring 2s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+@keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}

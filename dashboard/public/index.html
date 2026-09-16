@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NebulaLab OS — Distributed Cloud & Cluster Control</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0b0f19">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            900: '#070a12',
+                            800: '#0d1322',
+                            700: '#141d33',
+                            600: '#1e294b'
+                        },
+                        cyber: {
+                            blue: '#38bdf8',
+                            purple: '#a855f7',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e',
+                            indigo: '#6366f1'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <!-- QRCode.js CDN for Mobile scan -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #070a12;
+            color: #e2e8f0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .glass-panel {
+            background: rgba(13, 19, 34, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .glass-card {
+            background: rgba(20, 29, 51, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(99, 102, 241, 0.1);
+        }
+
+        .cyber-glow {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+        }
+
+        .pulse-online {
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-ring 2s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #070a12; }
+        ::-webkit-scrollbar-thumb { background: #1e294b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-white/10 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- Brand -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('overview')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                    <i class="fa-solid fa-atom text-white text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-indigo-200 to-cyan-300 bg-clip-text text-transparent">NebulaLab</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">OS 2.0</span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">Distributed Linux Cloud & Homelab Cluster</p>
+                </div>
+            </div>
+
+            <!-- Global Status & Quick Controls -->
+                <div id="tunnel-indicator" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-400 font-medium cursor-pointer hover:bg-cyan-500/20 transition" onclick="copyTunnelUrl()" title="Accès Distant HTTPS Zéro-Config (Cliquez pour copier)">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 pulse-online" id="tunnel-dot"></span>
+                    <i class="fa-solid fa-globe text-cyan-400"></i>
+                    <span id="tunnel-header-text" class="hidden sm:inline">Tunnel HTTPS</span>
+                </div>
+
+                <div id="ws-indicator" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-online"></span>
+                    <span id="ws-status-text" class="hidden sm:inline">Connecté Temps Réel</span>
+                </div>
+
+                <button onclick="switchTab('mobile-qr')" class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-semibold transition">
+                    <i class="fa-solid fa-mobile-screen-button text-sm"></i>
+                    <span class="hidden md:inline">Accès Téléphone</span>
+                </button>
+
+                <button onclick="refreshCluster()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Actualiser">
+                    <i class="fa-solid fa-rotate-right" id="refresh-icon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- NAV TABS (DESKTOP & TABLET) -->
+        <nav class="max-w-7xl mx-auto flex space-x-1 sm:space-x-2 mt-3 overflow-x-auto pb-1 text-sm font-medium no-scrollbar">
+            <button onclick="switchTab('overview')" id="tab-btn-overview" class="tab-btn active px-3.5 py-2 rounded-lg transition flex items-center space-x-2 bg-indigo-600 text-white shadow-sm">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Vue d'ensemble</span>
+            </button>
+            <button onclick="switchTab('nodes')" id="tab-btn-nodes" class="tab-btn px-3.5 py-2 rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                <i class="fa-solid fa-server"></i>
+                <span>Nœuds & Machines</span>
+                <span id="badge-nodes-count" class="text-xs px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300">0</span>
+            </button>
+            <button onclick="switchTab('jobs')" id="tab-btn-jobs" class="tab-btn px-3.5 py-2 rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                <i class="fa-solid fa-terminal"></i>
+                <span>Exécution & Jobs</span>
+            </button>
+            <button onclick="switchTab('files')" id="tab-btn-files" class="tab-btn px-3.5 py-2 rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                <i class="fa-solid fa-folder-tree"></i>
+                <span>Fichiers & Cloud</span>
+            </button>
+            <button onclick="switchTab('logs')" id="tab-btn-logs" class="tab-btn px-3.5 py-2 rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                <i class="fa-solid fa-file-waveform"></i>
+                <span>Logs Centralisés</span>
+            </button>
+            <button onclick="switchTab('alerts')" id="tab-btn-alerts" class="tab-btn px-3.5 py-2 rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                <i class="fa-solid fa-bell"></i>
+                <span>Alertes</span>
+                <span id="badge-alerts-count" class="hidden text-xs px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold">0</span>
+            </button>
+            <button onclick="switchTab('mobile-qr')" id="tab-btn-mobile-qr" class="tab-btn px-3.5 py-2 rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                <i class="fa-solid fa-qrcode"></i>
+                <span>Mobile & CLI</span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- ALERT BANNER TOAST (REALTIME) -->
+    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col space-y-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <!-- ==================== TAB 1: OVERVIEW ==================== -->
+        <section id="tab-overview" class="space-y-6">
+            <!-- Summary Metric Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                <!-- Nœuds Actifs -->
+                <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nœuds Connectés</span>
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                            <i class="fa-solid fa-server"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="text-2xl sm:text-3xl font-extrabold text-white flex items-baseline space-x-1">
+                            <span id="stat-active-nodes">0</span>
+                            <span id="stat-total-nodes" class="text-sm font-normal text-slate-400">/ 0</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">Pop!_OS, Ubuntu, Android</p>
+                    </div>
+                </div>
+
+                <!-- Cluster CPU -->
+                <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Charge CPU Moy.</span>
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                            <i class="fa-solid fa-microchip"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="text-2xl sm:text-3xl font-extrabold text-white">
+                            <span id="stat-avg-cpu">0.0</span><span class="text-lg font-bold text-indigo-400">%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                            <div id="bar-avg-cpu" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cluster RAM -->
+                <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Mémoire RAM Moy.</span>
+                        <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                            <i class="fa-solid fa-memory"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="text-2xl sm:text-3xl font-extrabold text-white">
+                            <span id="stat-avg-ram">0.0</span><span class="text-lg font-bold text-purple-400">%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                            <div id="bar-avg-ram" class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cluster Storage -->
+                <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Disque Cluster</span>
+                        <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                            <i class="fa-solid fa-hard-drive"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="text-2xl sm:text-3xl font-extrabold text-white">
+                            <span id="stat-avg-disk">0.0</span><span class="text-lg font-bold text-cyan-400">%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                            <div id="bar-avg-disk" class="bg-cyan-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Chart & Quick Actions Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Cluster Performance Graph -->
+                <div class="lg:col-span-2 glass-card rounded-2xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-line text-indigo-400"></i>
+                            <span>Métriques en Temps Réel du Cluster</span>
+                        </h3>
+                        <span class="text-xs text-slate-400 font-mono">Actualisation: 5s</span>
+                    </div>
+                    <div class="h-64 sm:h-72 w-full">
+                        <canvas id="clusterMetricsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Quick Action Panel & Hub -->
+                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                    <div>
+                        <h3 class="font-bold text-white mb-3 flex items-center space-x-2">
+                            <i class="fa-solid fa-bolt text-amber-400"></i>
+                            <span>Actions Rapides Cluster</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-4">Exécutez des ordres instantanés sur l'ensemble de votre infrastructure.</p>
+
+                        <div class="space-y-2.5">
+                            <button onclick="executeQuickPreset('uptime', true)" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-between transition border border-white/5">
+                                <span class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-clock text-cyan-400"></i>
+                                    <span>Check Uptime Global (Broadcast)</span>
+                                </span>
+                                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                            </button>
+
+                            <button onclick="executeQuickPreset('free -h', true)" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-between transition border border-white/5">
+                                <span class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-memory text-purple-400"></i>
+                                    <span>Audit Mémoire RAM (Broadcast)</span>
+                                </span>
+                                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                            </button>
+
+                            <button onclick="executeQuickPreset('df -h /', true)" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-between transition border border-white/5">
+                                <span class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-hard-drive text-emerald-400"></i>
+                                    <span>Audit Espace Disque (Broadcast)</span>
+                                </span>
+                                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                            </button>
+
+                            <button onclick="switchTab('files')" class="w-full px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-between transition border border-white/5">
+                                <span class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-upload text-indigo-400"></i>
+                                    <span>Transférer un Fichier (depuis le tel ou PC)</span>
+                                </span>
+                                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-xs text-indigo-300 flex items-center space-x-3">
+                        <i class="fa-solid fa-circle-info text-base text-indigo-400"></i>
+                        <span>Pour intégrer votre téléphone, rendez-vous sur l'onglet <strong>Mobile & CLI</strong>.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cluster Nodes Live Preview Grid -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-network-wired text-cyan-400"></i>
+                        <span>Nœuds Détectés dans le Cluster</span>
+                    </h3>
+                    <button onclick="switchTab('nodes')" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-1">
+                        <span>Voir détails complets</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+                <div id="overview-nodes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic Node Cards -->
+                    <div class="glass-card rounded-2xl p-5 text-center text-slate-400">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-indigo-400"></i>
+                        <p class="text-sm">Découverte des nœuds en cours...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==================== TAB 2: NODES & MACHINES ==================== -->
+        <section id="tab-nodes" class="space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Nœuds & Dispositifs du Cluster</h2>
+                    <p class="text-xs text-slate-400">Machines physiques (Pop!_OS, Ubuntu), conteneurs et smartphones connectés</p>
+                </div>
+                <button onclick="switchTab('mobile-qr')" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-2 transition self-start sm:self-auto">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Ajouter un Nœud / Téléphone</span>
+                </button>
+            </div>
+
+            <div id="nodes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Injected via JavaScript -->
+            </div>
+        </section>
+
+
+        <!-- ==================== TAB 3: JOBS & REMOTE RUNNER ==================== -->
+        <section id="tab-jobs" class="space-y-6 hidden">
+            <div class="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+                <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-terminal text-cyan-400"></i>
+                        <span>Console d'Exécution Distante</span>
+                    </h2>
+                    <span class="text-xs px-2.5 py-1 rounded-md bg-indigo-500/20 text-indigo-300 font-mono">SSH-less / Agent Engine</span>
+                </div>
+
+                <!-- Job Form -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Target Node Selector -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Cible d'Exécution</label>
+                        <select id="job-target-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                            <option value="broadcast">🌐 TOUT LE CLUSTER (Broadcast)</option>
+                            <option value="auto">⚡ Automatique (Nœud le moins chargé)</option>
+                            <!-- Dynamic Node Options -->
+                        </select>
+                    </div>
+
+                    <!-- Job Type -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Type d'Exécution</label>
+                        <select id="job-type-select" onchange="toggleJobTypeView()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                            <option value="shell">Shell Command (bash/sh)</option>
+                            <option value="docker">Docker Container Run</option>
+                            <option value="script">Script Complet Multi-lignes</option>
+                        </select>
+                    </div>
+
+                    <!-- Priority -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Priorité</label>
+                        <select id="job-priority-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                            <option value="1">Haute (Immédiate)</option>
+                            <option value="0" selected>Normale</option>
+                            <option value="-1">Basse</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Preset Quick Buttons -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Commandes Prédéfinies 1-Click :</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="setJobCommand('uptime')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-mono">uptime</button>
+                        <button onclick="setJobCommand('free -m')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-mono">free -m</button>
+                        <button onclick="setJobCommand('df -h')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-mono">df -h</button>
+                        <button onclick="setJobCommand('uname -a')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-mono">uname -a</button>
+                        <button onclick="setJobCommand('docker ps -a')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-mono">docker ps -a</button>
+                        <button onclick="setJobCommand('ip -br a')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-mono">ip -br a</button>
+                        <button onclick="setJobCommand('ps aux --sort=-%cpu | head -n 6')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-mono">top 5 cpu</button>
+                    </div>
+                </div>
+
+                <!-- Command Input / Script Input -->
+                <div id="job-command-container">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Commande Shell</label>
+                    <div class="relative">
+                        <input type="text" id="job-cmd-input" placeholder="ex: uname -a, apt update, docker ps..." class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-24 py-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-indigo-500">
+                        <i class="fa-solid fa-chevron-right absolute left-4 top-4 text-slate-500 text-xs"></i>
+                        <button onclick="submitJob()" id="btn-submit-job" class="absolute right-2 top-2 bottom-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-play text-[10px]"></i>
+                            <span>Exécuter</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="job-script-container" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Script Bash / Python</label>
+                    <textarea id="job-script-input" rows="5" placeholder="#!/bin/bash&#10;echo 'Hello from NebulaLab node $(hostname)'&#10;date" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-emerald-400 font-mono focus:outline-none focus:border-indigo-500"></textarea>
+                    <button onclick="submitJob()" class="mt-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-2">
+                        <i class="fa-solid fa-play"></i>
+                        <span>Lancer le Script</span>
+                    </button>
+                </div>
+
+                <!-- Live Execution Console Output -->
+                <div class="mt-6 border border-slate-800 rounded-xl overflow-hidden bg-slate-950">
+                    <div class="bg-slate-900/90 px-4 py-2.5 flex items-center justify-between border-b border-slate-800">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <span class="text-xs font-mono text-slate-400 ml-2">Console de Sortie (STDOUT / STDERR)</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span id="job-exec-status" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">En attente</span>
+                            <button onclick="clearConsole()" class="text-xs text-slate-400 hover:text-slate-200 p-1" title="Effacer console">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <pre id="job-console-output" class="p-4 text-xs font-mono text-slate-200 h-64 overflow-y-auto whitespace-pre-wrap leading-relaxed">En attente d'une tâche à exécuter...</pre>
+                </div>
+            </div>
+
+            <!-- Recent Jobs History Table -->
+            <div class="glass-card rounded-2xl p-5">
+                <h3 class="font-bold text-white mb-4 flex items-center space-x-2">
+                    <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i>
+                    <span>Historique Récent des Jobs</span>
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="text-slate-400 border-b border-slate-800 uppercase tracking-wider font-semibold">
+                            <tr>
+                                <th class="pb-3 px-2">ID</th>
+                                <th class="pb-3 px-2">Nœud</th>
+                                <th class="pb-3 px-2">Commande</th>
+                                <th class="pb-3 px-2">Statut</th>
+                                <th class="pb-3 px-2">Créé</th>
+                                <th class="pb-3 px-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobs-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                            <tr><td colspan="6" class="py-4 text-center text-slate-500">Chargement de l'historique...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==================== TAB 4: CLOUD STORAGE & FILE TRANSFERS ==================== -->
+        <section id="tab-files" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- File Upload Card -->
+                <div class="glass-card rounded-2xl p-5 space-y-4">
+                    <h3 class="font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-cyan-400"></i>
+                        <span>Téléverser un Fichier</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">Envoyez des scripts, archives, photos ou configurations directement dans le stockage partagé du cluster.</p>
+
+                    <div class="border-2 border-dashed border-slate-700 hover:border-indigo-500/50 rounded-2xl p-6 text-center transition cursor-pointer" onclick="document.getElementById('file-upload-input').click()">
+                        <i class="fa-solid fa-file-arrow-up text-3xl text-indigo-400 mb-2"></i>
+                        <p class="text-xs text-slate-300 font-semibold" id="selected-file-label">Cliquez ou glissez un fichier ici</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Depuis votre PC ou Téléphone (photo, doc, zip)</p>
+                        <input type="file" id="file-upload-input" class="hidden" onchange="handleFileSelected(event)">
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="encrypt-file-chk" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0">
+                        <label for="encrypt-file-chk" class="text-xs text-slate-300">Chiffrer le fichier avec Fernet AES-128</label>
+                    </div>
+
+                    <button onclick="uploadFile()" id="btn-upload-file" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>Envoyer dans le Cloud Cluster</span>
+                    </button>
+                </div>
+
+                <!-- Shared Files List -->
+                <div class="lg:col-span-2 glass-card rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-folder-open text-purple-400"></i>
+                            <span>Fichiers Partagés dans le Lab</span>
+                        </h3>
+                        <button onclick="loadSharedFiles()" class="text-xs text-slate-400 hover:text-slate-200">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                    </div>
+
+                    <div id="shared-files-container" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                        <div class="text-center py-6 text-slate-500 text-xs">Aucun fichier dans le cloud partagé.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==================== TAB 5: CENTRALIZED LOGS ==================== -->
+        <section id="tab-logs" class="space-y-4 hidden">
+            <div class="glass-card rounded-2xl p-5 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-file-waveform text-indigo-400"></i>
+                            <span>Logs Centralisés du Cluster</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Flux d'événements en continu de tous les nœuds connectés</p>
+                    </div>
+
+                    <!-- Filter Controls -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="log-filter-level" onchange="loadLogs()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                            <option value="">Tous les niveaux</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+
+                        <button onclick="loadLogs()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+
+                <div id="logs-feed" class="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-slate-300 h-96 overflow-y-auto space-y-1.5">
+                    <div class="text-slate-500">Chargement des logs...</div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==================== TAB 6: ALERTS ==================== -->
+        <section id="tab-alerts" class="space-y-6 hidden">
+            <div class="glass-card rounded-2xl p-5 space-y-4">
+                <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-400"></i>
+                            <span>Centre d'Alertes et Surveillance</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Détection automatique des surcharges CPU/RAM/Disque et nœuds hors-ligne</p>
+                    </div>
+                    <button onclick="resolveAllAlerts()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition">
+                        <i class="fa-solid fa-check-double mr-1.5 text-emerald-400"></i> Tout Résoudre
+                    </button>
+                </div>
+
+                <div id="alerts-list-container" class="space-y-3">
+                    <div class="text-center py-8 text-slate-500 text-xs">Aucune alerte active dans le cluster.</div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==================== TAB 7: MOBILE ACCESS & CONNECT ==================== -->
+        <section id="tab-mobile-qr" class="space-y-6 hidden">
+            <!-- Connection Mode Switcher & Tunnel Status Bar -->
+            <div class="glass-card rounded-2xl p-5 space-y-4 border border-indigo-500/20">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-bold text-white uppercase tracking-wider">Mode de Connexion du Cluster</span>
+                            <span id="badge-current-mode" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">ZÉRO-CONFIG ACTIF</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-0.5">Connectez votre smartphone et vos autres PC sans jamais avoir à configurer votre routeur, ni chercher votre IP !</p>
+                    </div>
+
+                    <!-- Mode Toggle Buttons -->
+                    <div class="flex items-center space-x-2 bg-slate-950/80 p-1 rounded-xl border border-slate-800 w-full sm:w-auto">
+                        <button onclick="switchConnMode('tunnel')" id="btn-mode-tunnel" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold transition bg-cyan-600 text-white shadow">
+                            <i class="fa-solid fa-globe mr-1.5"></i> Tunnel Distant (Zéro-Config)
+                        </button>
+                        <button onclick="switchConnMode('lan')" id="btn-mode-lan" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400 hover:text-white">
+                            <i class="fa-solid fa-wifi mr-1.5"></i> Réseau Local (Wi-Fi)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tunnel Settings & Status Panel -->
+                <div id="tunnel-details-panel" class="pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                    <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">État du Tunnel HTTPS</span>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-online" id="tunnel-status-dot"></span>
+                            <span class="font-bold text-white text-xs truncate" id="tunnel-status-text">Initialisation...</span>
+                        </div>
+                        <span class="text-[10px] text-cyan-400 font-mono block mt-1 truncate" id="tunnel-url-display">https://...</span>
+                    </div>
+
+                    <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <div>
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Fournisseur Tunnel</span>
+                            <div class="flex items-center space-x-1.5 mt-1">
+                                <select id="tunnel-provider-select" onchange="onTunnelProviderChange()" class="bg-slate-950 text-white border border-slate-700 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-cyan-500 w-full">
+                                    <option value="auto">⚡ Auto Zéro-Config (localhost.run / pinggy)</option>
+                                    <option value="localhost.run">🌐 localhost.run (Zéro Token SSH)</option>
+                                    <option value="pinggy">⚡ Pinggy (HTTPS Direct)</option>
+                                    <option value="serveo">🔗 Serveo (SSH Reverse)</option>
+                                    <option value="ngrok">🥑 Ngrok (Support Officiel)</option>
+                                    <option value="disabled">🚫 Désactivé (Local uniquement)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <div id="ngrok-token-container" class="hidden">
+                            <span class="text-slate-400 block text-[10px] uppercase font-bold">Authtoken Ngrok (Optionnel)</span>
+                            <input type="password" id="ngrok-token-input" placeholder="Collez votre authtoken ici..." class="mt-1 bg-slate-950 text-white border border-slate-700 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-cyan-500 w-full font-mono">
+                        </div>
+                        <div id="zero-config-info" class="text-[11px] text-slate-400">
+                            <i class="fa-solid fa-wand-magic-sparkles text-cyan-400 mr-1"></i> Mode Zéro-Config : Fonctionne immédiatement sans inscription, ni token, ni redirection de port.
+                        </div>
+                        <div class="flex items-center space-x-2 mt-2">
+                            <button onclick="applyTunnelSettings()" id="btn-save-tunnel" class="flex-1 px-2.5 py-1 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 border border-cyan-500/30 font-semibold transition text-xs flex items-center justify-center space-x-1">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                <span>Appliquer & Relancer</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LAN IP Selection (Visible only in LAN mode) -->
+                <div id="lan-details-panel" class="hidden pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-network-wired text-indigo-400 text-base"></i>
+                        <div>
+                            <span class="text-white font-bold">Adresse IP Master LAN détectée :</span>
+                            <span class="text-slate-400 block text-[10px]">Sélectionnez l'interface réseau Wi-Fi / Ethernet utilisée</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 w-full sm:w-auto">
+                        <select id="lan-ip-select" onchange="onLanIpSelect(this.value)" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:border-indigo-500 focus:outline-none w-full sm:w-48">
+                        </select>
+                        <button onclick="refreshCluster()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition whitespace-nowrap">
+                            <i class="fa-solid fa-arrows-rotate mr-1"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- QR Code Connect Card -->
+                <div class="glass-card rounded-2xl p-6 text-center space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto text-xl shadow-lg border border-cyan-500/30">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Connexion Smartphone Instantanée</h3>
+                        <p class="text-xs text-slate-400 max-w-sm mx-auto mt-0.5" id="qr-desc-text">
+                            Scannez ce QR Code avec votre appareil photo pour ouvrir le Dashboard sans rien taper.
+                        </p>
+                    </div>
+
+                    <!-- QR Code Canvas Container -->
+                    <div class="p-4 bg-white rounded-2xl inline-block shadow-xl shadow-cyan-500/10 mx-auto" id="qrcode-box"></div>
+
+                    <div class="flex items-center justify-center space-x-2">
+                        <span class="text-xs text-cyan-300 font-mono bg-slate-900 px-3.5 py-1.5 rounded-lg border border-slate-800 max-w-xs truncate" id="mobile-url-display">https://...</span>
+                        <button onclick="copyToClipboard(document.getElementById('mobile-url-display').textContent)" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs" title="Copier l'URL">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                        <a id="mobile-url-link" href="#" target="_blank" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs" title="Ouvrir dans un nouvel onglet">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </div>
+
+                    <div class="p-3 bg-slate-900/80 border border-slate-800 rounded-xl text-left text-xs text-slate-300 space-y-1">
+                        <div class="font-semibold text-emerald-400"><i class="fa-solid fa-mobile-screen mr-1"></i> Astuce Application Mobile (PWA) :</div>
+                        <p>Une fois ouvert sur votre téléphone, appuyez sur <strong>"Ajouter à l'écran d'accueil"</strong> pour l'utiliser en plein écran comme une vraie application native !</p>
+                    </div>
+                </div>
+
+                <!-- Connect other machines -->
+                <div class="glass-card rounded-2xl p-6 space-y-5">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-plug-circle-bolt"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-white">Ajouter des Nœuds au Cluster (1 Clic)</h3>
+                            <p class="text-xs text-slate-400">Copiez-collez la commande ci-dessous sur chaque machine cliente :</p>
+                        </div>
+                    </div>
+
+                    <!-- 1. Linux Ubuntu / Pop!_OS / Debian -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-orange-400 flex items-center"><i class="fa-brands fa-ubuntu mr-1.5"></i> Ubuntu / Debian / Pop!_OS / Raspberry Pi :</span>
+                            <button onclick="copySnippet('cmd-ubuntu')" class="text-indigo-400 hover:text-indigo-300 text-xs flex items-center">
+                                <i class="fa-regular fa-copy mr-1"></i> Copier
+                            </button>
+                        </div>
+                        <div class="bg-slate-950 rounded-xl p-3 border border-slate-800 text-xs font-mono text-emerald-400 overflow-x-auto select-all" id="cmd-ubuntu">
+                            <code id="cmd-ubuntu-code">curl -sSL https://.../join | bash</code>
+                        </div>
+                    </div>
+
+                    <!-- 2. Android Termux -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-emerald-400 flex items-center"><i class="fa-brands fa-android mr-1.5"></i> Android (Termux) :</span>
+                            <button onclick="copySnippet('cmd-termux')" class="text-indigo-400 hover:text-indigo-300 text-xs flex items-center">
+                                <i class="fa-regular fa-copy mr-1"></i> Copier
+                            </button>
+                        </div>
+                        <div class="bg-slate-950 rounded-xl p-3 border border-slate-800 text-xs font-mono text-cyan-400 overflow-x-auto select-all" id="cmd-termux">
+                            <code id="cmd-termux-code">pkg update -y && pkg install -y python curl && curl -sSL https://.../join | bash</code>
+                        </div>
+                    </div>
+
+                    <!-- 3. Windows PowerShell -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-blue-400 flex items-center"><i class="fa-brands fa-windows mr-1.5"></i> Windows 10 / 11 (PowerShell) :</span>
+                            <button onclick="copySnippet('cmd-windows')" class="text-indigo-400 hover:text-indigo-300 text-xs flex items-center">
+                                <i class="fa-regular fa-copy mr-1"></i> Copier
+                            </button>
+                        </div>
+                        <div class="bg-slate-950 rounded-xl p-3 border border-slate-800 text-xs font-mono text-blue-300 overflow-x-auto select-all" id="cmd-windows">
+                            <code id="cmd-windows-code">irm https://.../join.ps1 | iex</code>
+                        </div>
+                    </div>
+
+                    <!-- 4. Test API REST -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-slate-300 flex items-center"><i class="fa-solid fa-terminal mr-1.5"></i> Test de l'API REST (cURL) :</span>
+                            <button onclick="copySnippet('cmd-curl')" class="text-indigo-400 hover:text-indigo-300 text-xs flex items-center">
+                                <i class="fa-regular fa-copy mr-1"></i> Copier
+                            </button>
+                        </div>
+                        <div class="bg-slate-950 rounded-xl p-3 border border-slate-800 text-xs font-mono text-slate-300 overflow-x-auto select-all" id="cmd-curl">
+                            <code id="cmd-curl-code">curl -s https://.../api/overview</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="mt-auto border-t border-white/5 py-4 px-4 text-center text-xs text-slate-500">
+        <p>NebulaLab OS &bull; Distributed Linux Lab &bull; Pop!_OS &bull; Ubuntu &bull; Android Mobile</p>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // State
+        let clusterData = null;
+        let chartInstance = null;
+        let ws = null;
+        let chartHistory = { labels: [], cpu: [], ram: [], disk: [] };
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            initWebSocket();
+            refreshCluster();
+            initChart();
+            setupQR();
+            setInterval(refreshCluster, 5000);
+        });
+
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById(`tab-${tabId}`);
+            if (target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn px-3.5 py-2 rounded-lg transition flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60';
+            });
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.className = 'tab-btn active px-3.5 py-2 rounded-lg transition flex items-center space-x-2 bg-indigo-600 text-white shadow-sm';
+            }
+
+            if (tabId === 'files') loadSharedFiles();
+            if (tabId === 'logs') loadLogs();
+            if (tabId === 'alerts') loadAlerts();
+            if (tabId === 'jobs') loadJobsHistory();
+        }
+
+        // WebSocket Connection
+        function initWebSocket() {
+            const loc = window.location;
+            const wsProto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProto}//${loc.host}/ws`;
+
+            try {
+                ws = new WebSocket(wsUrl);
+                ws.onopen = () => {
+                    updateWsIndicator(true);
+                };
+                ws.onmessage = (event) => {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        handleRealtimeMessage(msg);
+                    } catch (e) {}
+                };
+                ws.onclose = () => {
+                    updateWsIndicator(false);
+                    setTimeout(initWebSocket, 3000);
+                };
+                ws.onerror = () => updateWsIndicator(false);
+            } catch (e) {
+                updateWsIndicator(false);
+            }
+        }
+
+        function updateWsIndicator(online) {
+            const el = document.getElementById('ws-indicator');
+            const txt = document.getElementById('ws-status-text');
+            if (online) {
+                el.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-medium';
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 pulse-online"></span><span id="ws-status-text" class="hidden sm:inline">Connecté Temps Réel</span>';
+            } else {
+                el.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-medium';
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span><span id="ws-status-text" class="hidden sm:inline">Reconnexion...</span>';
+            }
+        }
+
+        function handleRealtimeMessage(msg) {
+            if (msg.type === 'cluster_overview') {
+                updateOverviewUI(msg.data);
+            } else if (msg.type === 'metrics_update') {
+                refreshCluster();
+            } else if (msg.type === 'alert_triggered') {
+                showToast(`🚨 Alerte : ${msg.alert.message}`, 'rose');
+                loadAlerts();
+            } else if (msg.type === 'job_status_update') {
+                if (msg.stdout || msg.stderr) {
+                    appendConsoleOutput(msg);
+                }
+                loadJobsHistory();
+            } else if (msg.type === 'log_entry') {
+                prependLogLine(msg.log);
+            } else if (msg.type === 'file_uploaded' || msg.type === 'file_deleted') {
+                loadSharedFiles();
+                if (msg.type === 'file_deleted') {
+                    showToast(`🗑️ Fichier supprimé : ${msg.filename}`, 'indigo');
+                }
+            } else if (msg.type === 'machine_tag_added' || msg.type === 'machine_tag_removed' || msg.type === 'node_registered' || msg.type === 'node_deleted') {
+                refreshCluster();
+            }
+        }
+
+        // Fetch Cluster Data
+        async function refreshCluster() {
+            try {
+                const res = await fetch('/api/overview');
+                if (res.ok) {
+                    const data = await res.json();
+                    clusterData = data;
+                    updateOverviewUI(data);
+                }
+            } catch (e) {
+                console.error("Erreur actualisation :", e);
+            }
+        }
+
+        // Update Overview UI
+        function updateOverviewUI(data) {
+            if (!data) return;
+
+            document.getElementById('stat-active-nodes').textContent = data.active_nodes;
+            document.getElementById('stat-total-nodes').textContent = `/ ${data.total_nodes}`;
+            document.getElementById('badge-nodes-count').textContent = data.total_nodes;
+
+            const avgs = data.cluster_averages || { cpu_percent: 0, memory_percent: 0, disk_percent: 0 };
+            document.getElementById('stat-avg-cpu').textContent = avgs.cpu_percent.toFixed(1);
+            document.getElementById('bar-avg-cpu').style.width = `${Math.min(100, avgs.cpu_percent)}%`;
+
+            document.getElementById('stat-avg-ram').textContent = avgs.memory_percent.toFixed(1);
+            document.getElementById('bar-avg-ram').style.width = `${Math.min(100, avgs.memory_percent)}%`;
+
+            document.getElementById('stat-avg-disk').textContent = avgs.disk_percent.toFixed(1);
+            document.getElementById('bar-avg-disk').style.width = `${Math.min(100, avgs.disk_percent)}%`;
+
+            // Alerts badge
+            const alertsCount = data.active_alerts_count || 0;
+            const alertBadge = document.getElementById('badge-alerts-count');
+            if (alertsCount > 0) {
+                alertBadge.textContent = alertsCount;
+                alertBadge.classList.remove('hidden');
+            } else {
+                alertBadge.classList.add('hidden');
+            }
+
+            // Update Chart
+            updateChartData(avgs);
+
+            // Update Tunnel UI and LAN IPs
+            updateTunnelUI(data.tunnel, data.public_url);
+            updateLanIps(data.available_ips, data.master_ip);
+            updateConnectionSnippets();
+
+            // Render Nodes
+            renderNodesGrid(data.nodes || []);
+        }
+
+        // Render Nodes Grid
+        function renderNodesGrid(nodes) {
+            const grid = document.getElementById('overview-nodes-grid');
+            const fullGrid = document.getElementById('nodes-container');
+            const targetSelect = document.getElementById('job-target-select');
+
+            // Collect unique tags
+            const tagsSet = new Set();
+            (nodes || []).forEach(n => {
+                if (n.tags) {
+                    n.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => tagsSet.add(t));
+                }
+            });
+
+            // Populate selector with broadcast, auto, tags group, and machines group
+            const currentSelected = targetSelect.value;
+            let optionsHtml = '<option value="broadcast">🌐 TOUT LE CLUSTER (Broadcast)</option><option value="auto">⚡ Automatique (Moins chargé)</option>';
+
+            if (tagsSet.size > 0) {
+                optionsHtml += '<optgroup label="🏷️ Cibler par Tag">';
+                tagsSet.forEach(tag => {
+                    optionsHtml += `<option value="tag:${tag}">🏷️ Tous les nœuds avec tag #${tag}</option>`;
+                });
+                optionsHtml += '</optgroup>';
+            }
+
+            if (!nodes || nodes.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-6 text-slate-500">Aucune machine connectée. Démarrez un agent sur Pop!_OS ou Ubuntu.</div>';
+                fullGrid.innerHTML = grid.innerHTML;
+                targetSelect.innerHTML = optionsHtml;
+                return;
+            }
+
+            optionsHtml += '<optgroup label="🖥️ Machines Spécifiques">';
+            let cardsHtml = '';
+            nodes.forEach(n => {
+                const m = n.metrics || { cpu_percent: 0, memory_percent: 0, disk_percent: 0, network_rx_sec: 0, network_tx_sec: 0 };
+                const isOnline = n.is_active;
+                const statusBadge = isOnline
+                    ? '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30 flex items-center space-x-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>EN LIGNE</span></span>'
+                    : '<span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-bold border border-rose-500/30">HORS-LIGNE</span>';
+
+                // OS Icon
+                let osIcon = 'fa-brands fa-linux text-cyan-400';
+                const osLower = (n.os_type || '').toLowerCase();
+                if (osLower.includes('pop')) osIcon = 'fa-solid fa-rocket text-cyan-300';
+                else if (osLower.includes('ubuntu')) osIcon = 'fa-brands fa-ubuntu text-amber-500';
+                else if (osLower.includes('android')) osIcon = 'fa-brands fa-android text-emerald-400';
+                else if (osLower.includes('windows')) osIcon = 'fa-brands fa-windows text-blue-400';
+                else if (osLower.includes('apple') || osLower.includes('macos') || osLower.includes('ios')) osIcon = 'fa-brands fa-apple text-slate-300';
+                else if (osLower.includes('debian')) osIcon = 'fa-brands fa-debian text-rose-400';
+                else if (osLower.includes('redhat') || osLower.includes('fedora')) osIcon = 'fa-brands fa-fedora text-blue-300';
+                else if (osLower.includes('raspberry') || osLower.includes('raspbian')) osIcon = 'fa-brands fa-raspberry-pi text-rose-500';
+
+                optionsHtml += `<option value="${n.id}">🖥️ ${n.hostname} (${n.ip_address} - ${n.os_type})</option>`;
+
+                const tagsList = (n.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+                const tagsHtml = tagsList.map(t => `
+                    <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-mono border border-indigo-500/30">
+                        <span>#${t}</span>
+                        <button onclick="removeNodeTag(${n.id}, '${t}')" class="hover:text-rose-400 ml-1 text-slate-400 text-[10px]">&times;</button>
+                    </span>
+                `).join('');
+
+                cardsHtml += `
+                    <div class="glass-card rounded-2xl p-5 space-y-4 relative">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-xl">
+                                    <i class="${osIcon}"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white text-sm flex items-center space-x-1.5">
+                                        <span>${n.hostname}</span>
+                                        <span class="text-[10px] text-slate-400 font-mono">#${n.id}</span>
+                                    </h4>
+                                    <p class="text-xs text-slate-400 font-mono">${n.ip_address} &bull; ${n.os_type}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                ${statusBadge}
+                                <button onclick="deleteNode(${n.id}, '${n.hostname}')" class="p-1 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Supprimer cette machine">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tags Bar -->
+                        <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                            ${tagsHtml}
+                            <button onclick="promptAddTag(${n.id})" class="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-indigo-300 text-[10px] font-semibold border border-slate-700 transition" title="Ajouter un tag">
+                                <i class="fa-solid fa-plus text-[9px] mr-1"></i>Tag
+                            </button>
+                        </div>
+
+                        <!-- Progress Bars -->
+                        <div class="space-y-2 pt-1 text-xs">
+                            <div>
+                                <div class="flex justify-between text-slate-400 mb-1">
+                                    <span>CPU (${n.cpu_cores || 1} cœurs)</span>
+                                    <span class="font-bold text-slate-200">${m.cpu_percent.toFixed(1)}%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${Math.min(100, m.cpu_percent)}%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-slate-400 mb-1">
+                                    <span>RAM (${n.ram_total_gb || 0} GB)</span>
+                                    <span class="font-bold text-slate-200">${m.memory_percent.toFixed(1)}%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-purple-500 h-1.5 rounded-full" style="width: ${Math.min(100, m.memory_percent)}%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-slate-400 mb-1">
+                                    <span>Disque</span>
+                                    <span class="font-bold text-slate-200">${m.disk_percent.toFixed(1)}%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-cyan-500 h-1.5 rounded-full" style="width: ${Math.min(100, m.disk_percent)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="flex items-center space-x-2 pt-2 border-t border-white/5">
+                            <button onclick="quickJobForNode(${n.id}, 'uptime')" class="flex-1 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 transition">
+                                <i class="fa-solid fa-play text-[9px] mr-1 text-emerald-400"></i> Run Job
+                            </button>
+                            <button onclick="quickJobForNode(${n.id}, 'free -h')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 transition">
+                                <i class="fa-solid fa-memory text-[9px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            optionsHtml += '</optgroup>';
+
+            grid.innerHTML = cardsHtml;
+            fullGrid.innerHTML = cardsHtml;
+            targetSelect.innerHTML = optionsHtml;
+            if (currentSelected) targetSelect.value = currentSelected;
+        }
+
+        // Chart Initialization
+        function initChart() {
+            const ctx = document.getElementById('clusterMetricsChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartHistory.labels,
+                    datasets: [
+                        {
+                            label: 'CPU (%)',
+                            data: chartHistory.cpu,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'RAM (%)',
+                            data: chartHistory.ram,
+                            borderColor: '#a855f7',
+                            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', maxTicksLimit: 8 } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#e2e8f0', font: { family: 'Plus Jakarta Sans' } } }
+                    }
+                }
+            });
+        }
+
+        function updateChartData(avgs) {
+            if (!chartInstance) return;
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            if (chartHistory.labels.length > 15) {
+                chartHistory.labels.shift();
+                chartHistory.cpu.shift();
+                chartHistory.ram.shift();
+            }
+
+            chartHistory.labels.push(timeStr);
+            chartHistory.cpu.push(avgs.cpu_percent);
+            chartHistory.ram.push(avgs.memory_percent);
+            chartInstance.update('none');
+        }
+
+        // Jobs Execution
+        function toggleJobTypeView() {
+            const type = document.getElementById('job-type-select').value;
+            const cmdBox = document.getElementById('job-command-container');
+            const scriptBox = document.getElementById('job-script-container');
+
+            if (type === 'script') {
+                cmdBox.classList.add('hidden');
+                scriptBox.classList.remove('hidden');
+            } else {
+                cmdBox.classList.remove('hidden');
+                scriptBox.classList.add('hidden');
+            }
+        }
+
+        function setJobCommand(cmd) {
+            document.getElementById('job-cmd-input').value = cmd;
+        }
+
+        async function submitJob() {
+            const target = document.getElementById('job-target-select').value;
+            const jobType = document.getElementById('job-type-select').value;
+            const priority = parseInt(document.getElementById('job-priority-select').value) || 0;
+            const command = document.getElementById('job-cmd-input').value.trim();
+            const script = document.getElementById('job-script-input').value.trim();
+
+            if (jobType === 'script' && !script) {
+                alert("Veuillez saisir le contenu du script");
+                return;
+            } else if (jobType !== 'script' && !command) {
+                alert("Veuillez saisir une commande");
+                return;
+            }
+
+            const isTagTarget = target.startsWith('tag:');
+            const payload = {
+                target: isTagTarget ? 'tag' : (target === 'broadcast' ? 'broadcast' : (target === 'auto' ? 'auto' : 'specific')),
+                tag: isTagTarget ? target.replace('tag:', '') : null,
+                machine_id: (!isTagTarget && target !== 'broadcast' && target !== 'auto') ? parseInt(target) : null,
+                job_type: jobType,
+                priority: priority,
+                command: command || 'script_exec',
+                script: script
+            };
+
+            const consoleBox = document.getElementById('job-console-output');
+            const statusEl = document.getElementById('job-exec-status');
+            statusEl.textContent = 'Envoi...';
+            statusEl.className = 'text-xs px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono';
+            consoleBox.textContent = `🚀 Lancement de la tâche (${payload.command})...\n`;
+
+            try {
+                const res = await fetch('/api/jobs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    statusEl.textContent = 'En cours...';
+                    consoleBox.textContent += `[Job #${data.id || (data.broadcast ? `Broadcast (${data.count} machines)` : 'Assigné')}] Attente de la sortie stdout/stderr...\n`;
+                    loadJobsHistory();
+                } else {
+                    const err = await res.text();
+                    statusEl.textContent = 'Erreur';
+                    consoleBox.textContent += `❌ Erreur API : ${err}\n`;
+                }
+            } catch (e) {
+                consoleBox.textContent += `❌ Erreur réseau : ${e}\n`;
+            }
+        }
+
+        function quickJobForNode(nodeId, cmd) {
+            switchTab('jobs');
+            document.getElementById('job-target-select').value = nodeId;
+            document.getElementById('job-cmd-input').value = cmd;
+            submitJob();
+        }
+
+        function executeQuickPreset(cmd, broadcast = true) {
+            switchTab('jobs');
+            document.getElementById('job-target-select').value = broadcast ? 'broadcast' : 'auto';
+            document.getElementById('job-cmd-input').value = cmd;
+            submitJob();
+        }
+
+        function appendConsoleOutput(msg) {
+            const consoleBox = document.getElementById('job-console-output');
+            const statusEl = document.getElementById('job-exec-status');
+            statusEl.textContent = msg.status.toUpperCase();
+            statusEl.className = msg.status === 'completed' 
+                ? 'text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono'
+                : 'text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono';
+
+            let out = `\n--- [Fin Job #${msg.job_id} | Code: ${msg.return_code}] ---\n`;
+            if (msg.stdout) out += `[STDOUT]\n${msg.stdout}\n`;
+            if (msg.stderr) out += `[STDERR]\n${msg.stderr}\n`;
+            consoleBox.textContent += out;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('job-console-output').textContent = 'Console effacée.';
+            document.getElementById('job-exec-status').textContent = 'Prêt';
+        }
+
+        // Jobs History
+        async function loadJobsHistory() {
+            try {
+                const res = await fetch('/api/jobs?limit=20');
+                if (res.ok) {
+                    const jobs = await res.json();
+                    const tbody = document.getElementById('jobs-table-body');
+                    if (jobs.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-500">Aucun job récent.</td></tr>';
+                        return;
+                    }
+                    let html = '';
+                    jobs.forEach(j => {
+                        const stClass = j.status === 'completed' ? 'text-emerald-400 bg-emerald-500/10' :
+                                        j.status === 'running' ? 'text-indigo-400 bg-indigo-500/10' :
+                                        j.status === 'failed' ? 'text-rose-400 bg-rose-500/10' : 'text-slate-400 bg-slate-800';
+                        const canCancel = j.status === 'pending' || j.status === 'running';
+                        html += `
+                            <tr class="hover:bg-white/5">
+                                <td class="py-2.5 px-2 font-mono">#${j.id}</td>
+                                <td class="py-2.5 px-2">Machine #${j.machine_id}</td>
+                                <td class="py-2.5 px-2 font-mono text-emerald-400">${j.command}</td>
+                                <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${stClass}">${j.status.toUpperCase()}</span></td>
+                                <td class="py-2.5 px-2 text-slate-400">${new Date(j.created_at).toLocaleTimeString()}</td>
+                                <td class="py-2.5 px-2 text-right space-x-1">
+                                    <button onclick="inspectJob(${j.id})" class="text-indigo-400 hover:text-indigo-300" title="Inspecter"><i class="fa-solid fa-eye"></i></button>
+                                    ${canCancel ? `<button onclick="cancelJob(${j.id})" class="text-rose-400 hover:text-rose-300" title="Annuler le job"><i class="fa-solid fa-ban"></i></button>` : ''}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                }
+            } catch (e) {}
+        }
+
+        async function inspectJob(jobId) {
+            try {
+                const res = await fetch(`/api/jobs/${jobId}`);
+                if (res.ok) {
+                    const j = await res.json();
+                    const consoleBox = document.getElementById('job-console-output');
+                    consoleBox.textContent = `=== Détail Job #${j.id} (${j.command}) ===\nStatut : ${j.status}\nExit Code: ${j.return_code}\n\n[STDOUT]\n${j.stdout || '(vide)'}\n\n[STDERR]\n${j.stderr || '(vide)'}`;
+                }
+            } catch (e) {}
+        }
+
+        // Shared Files
+        let selectedFile = null;
+        function handleFileSelected(e) {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                document.getElementById('selected-file-label').textContent = `${selectedFile.name} (${(selectedFile.size/1024).toFixed(1)} Ko)`;
+            }
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) {
+                alert("Sélectionnez d'abord un fichier");
+                return;
+            }
+            const fd = new FormData();
+            fd.append('file', selectedFile);
+            fd.append('encrypt', document.getElementById('encrypt-file-chk').checked ? 'true' : 'false');
+
+            const btn = document.getElementById('btn-upload-file');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Téléversement...';
+
+            try {
+                const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
+                if (res.ok) {
+                    showToast("✅ Fichier téléversé avec succès !", "emerald");
+                    document.getElementById('selected-file-label').textContent = 'Cliquez ou glissez un fichier ici';
+                    selectedFile = null;
+                    loadSharedFiles();
+                } else {
+                    alert("Échec du téléversement");
+                }
+            } catch (e) {
+                alert("Erreur upload : " + e);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-upload mr-2"></i> Envoyer dans le Cloud Cluster';
+            }
+        }
+
+        async function loadSharedFiles() {
+            try {
+                const res = await fetch('/api/files');
+                if (res.ok) {
+                    const files = await res.json();
+                    const container = document.getElementById('shared-files-container');
+                    if (files.length === 0) {
+                        container.innerHTML = '<div class="text-center py-6 text-slate-500 text-xs">Aucun fichier dans le cloud partagé.</div>';
+                        return;
+                    }
+                    let html = '';
+                    files.forEach(f => {
+                        html += `
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition">
+                                <div class="flex items-center space-x-3 overflow-hidden">
+                                    <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-file"></i>
+                                    </div>
+                                    <div class="truncate">
+                                        <p class="font-bold text-xs text-white truncate">${f.filename}</p>
+                                        <p class="text-[10px] text-slate-400">${(f.size_bytes / 1024).toFixed(1)} Ko &bull; ${new Date(f.modified_at).toLocaleTimeString()}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <a href="/api/files/download/${encodeURIComponent(f.filename)}" download class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs" title="Télécharger">
+                                        <i class="fa-solid fa-download"></i>
+                                    </a>
+                                    <button onclick="deleteFile('${encodeURIComponent(f.filename)}')" class="p-2 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 text-xs" title="Supprimer">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                }
+            } catch (e) {}
+        }
+
+        async function deleteFile(encodedFilename) {
+            const filename = decodeURIComponent(encodedFilename);
+            if (!confirm(`Voulez-vous vraiment supprimer '${filename}' du stockage cloud ?`)) return;
+            try {
+                const res = await fetch(`/api/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast(`🗑️ Fichier '${filename}' supprimé`, 'indigo');
+                    loadSharedFiles();
+                } else {
+                    const err = await res.text();
+                    showToast(`❌ Erreur suppression : ${err}`, 'rose');
+                }
+            } catch (e) {
+                showToast(`❌ Erreur réseau : ${e}`, 'rose');
+            }
+        }
+
+        async function cancelJob(jobId) {
+            if (!confirm(`Annuler le job #${jobId} ?`)) return;
+            try {
+                const res = await fetch(`/api/jobs/${jobId}/cancel`, { method: 'POST' });
+                if (res.ok) {
+                    showToast(`⏹️ Job #${jobId} annulé`, 'amber');
+                    loadJobsHistory();
+                } else {
+                    showToast(`❌ Impossible d'annuler le job #${jobId}`, 'rose');
+                }
+            } catch (e) {
+                showToast(`❌ Erreur : ${e}`, 'rose');
+            }
+        }
+
+        async function promptAddTag(machineId) {
+            const tag = prompt("Nom du nouveau tag (ex: workers, gpu, prod, rasp) :");
+            if (!tag || !tag.trim()) return;
+            try {
+                const res = await fetch(`/api/machines/${machineId}/tags`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag: tag.trim() })
+                });
+                if (res.ok) {
+                    showToast(`🏷️ Tag '#${tag.trim()}' ajouté au nœud #${machineId}`, 'emerald');
+                    refreshCluster();
+                } else {
+                    const err = await res.text();
+                    showToast(`❌ Erreur tag : ${err}`, 'rose');
+                }
+            } catch (e) {
+                showToast(`❌ Erreur réseau : ${e}`, 'rose');
+            }
+        }
+
+        async function removeNodeTag(machineId, tag) {
+            if (!confirm(`Retirer le tag '#${tag}' de la machine #${machineId} ?`)) return;
+            try {
+                const res = await fetch(`/api/machines/${machineId}/tags/${encodeURIComponent(tag)}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    showToast(`🏷️ Tag '#${tag}' retiré`, 'indigo');
+                    refreshCluster();
+                } else {
+                    showToast(`❌ Erreur retrait tag`, 'rose');
+                }
+            } catch (e) {
+                showToast(`❌ Erreur réseau : ${e}`, 'rose');
+            }
+        }
+
+        async function deleteNode(machineId, hostname) {
+            if (!confirm(`Voulez-vous vraiment désenregistrer la machine #${machineId} (${hostname}) du cluster ?`)) return;
+            try {
+                const res = await fetch(`/api/machines/${machineId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast(`🗑️ Nœud #${machineId} (${hostname}) supprimé`, 'indigo');
+                    refreshCluster();
+                } else {
+                    showToast(`❌ Erreur lors de la suppression`, 'rose');
+                }
+            } catch (e) {
+                showToast(`❌ Erreur réseau : ${e}`, 'rose');
+            }
+        }
+
+        // Logs
+        async function loadLogs() {
+            const lvl = document.getElementById('log-filter-level').value;
+            const url = lvl ? `/api/logs?level=${lvl}&limit=50` : '/api/logs?limit=50';
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const logs = await res.json();
+                    const feed = document.getElementById('logs-feed');
+                    if (logs.length === 0) {
+                        feed.innerHTML = '<div class="text-slate-500">Aucun log disponible.</div>';
+                        return;
+                    }
+                    let html = '';
+                    logs.forEach(l => {
+                        const col = l.level === 'ERROR' ? 'text-rose-400' : (l.level === 'WARNING' ? 'text-amber-400' : 'text-slate-300');
+                        html += `<div class="${col}"><span class="text-slate-500">[${new Date(l.timestamp).toLocaleTimeString()}]</span> <span class="font-bold text-indigo-300">[${l.hostname || l.source}]</span> [${l.level}] ${l.message}</div>`;
+                    });
+                    feed.innerHTML = html;
+                }
+            } catch (e) {}
+        }
+
+        function prependLogLine(l) {
+            const feed = document.getElementById('logs-feed');
+            const col = l.level === 'ERROR' ? 'text-rose-400' : (l.level === 'WARNING' ? 'text-amber-400' : 'text-slate-300');
+            const div = document.createElement('div');
+            div.className = col;
+            div.innerHTML = `<span class="text-slate-500">[${new Date(l.timestamp).toLocaleTimeString()}]</span> <span class="font-bold text-indigo-300">[${l.hostname || l.source}]</span> [${l.level}] ${l.message}`;
+            feed.insertBefore(div, feed.firstChild);
+        }
+
+        // Alerts
+        async function loadAlerts() {
+            try {
+                const res = await fetch('/api/alerts');
+                if (res.ok) {
+                    const alerts = await res.json();
+                    const container = document.getElementById('alerts-list-container');
+                    if (alerts.length === 0) {
+                        container.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">✅ Aucune alerte active dans le cluster.</div>';
+                        return;
+                    }
+                    let html = '';
+                    alerts.forEach(a => {
+                        const isCrit = a.severity === 'critical';
+                        html += `
+                            <div class="p-4 rounded-xl ${isCrit ? 'bg-rose-950/40 border-rose-500/30' : 'bg-amber-950/40 border-amber-500/30'} border flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fa-solid fa-triangle-exclamation ${isCrit ? 'text-rose-400' : 'text-amber-400'} text-lg"></i>
+                                    <div>
+                                        <p class="text-xs font-bold text-white">${a.message}</p>
+                                        <p class="text-[10px] text-slate-400">Nœud : ${a.hostname || a.machine_id} &bull; ${new Date(a.created_at).toLocaleTimeString()}</p>
+                                    </div>
+                                </div>
+                                <button onclick="resolveAlert(${a.id})" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200">
+                                    Résoudre
+                                </button>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                }
+            } catch (e) {}
+        }
+
+        async function resolveAlert(alertId) {
+            await fetch(`/api/alerts/${alertId}/resolve`, { method: 'PUT' });
+            loadAlerts();
+            refreshCluster();
+        }
+
+        async function resolveAllAlerts() {
+            await fetch('/api/alerts/resolve-all', { method: 'POST' });
+            loadAlerts();
+            refreshCluster();
+        }
+
+        // Connection & Tunnel State
+        let currentConnMode = 'tunnel'; // 'tunnel' or 'lan'
+        let currentMasterIp = '';
+        let currentTunnelUrl = '';
+        let availableIps = [];
+
+        function switchConnMode(mode) {
+            currentConnMode = mode;
+            const btnTunnel = document.getElementById('btn-mode-tunnel');
+            const btnLan = document.getElementById('btn-mode-lan');
+            const badgeMode = document.getElementById('badge-current-mode');
+            const tunnelPanel = document.getElementById('tunnel-details-panel');
+            const lanPanel = document.getElementById('lan-details-panel');
+            const qrDesc = document.getElementById('qr-desc-text');
+
+            if (mode === 'tunnel') {
+                if (btnTunnel) btnTunnel.className = 'flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold transition bg-cyan-600 text-white shadow';
+                if (btnLan) btnLan.className = 'flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400 hover:text-white';
+                if (badgeMode) {
+                    badgeMode.textContent = 'ZÉRO-CONFIG DISTANT (TUNNEL)';
+                    badgeMode.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30';
+                }
+                if (tunnelPanel) tunnelPanel.classList.remove('hidden');
+                if (lanPanel) lanPanel.classList.add('hidden');
+                if (qrDesc) qrDesc.textContent = "Scannez ce QR Code avec votre appareil photo pour ouvrir le Dashboard sans rien taper.";
+            } else {
+                if (btnLan) btnLan.className = 'flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white shadow';
+                if (btnTunnel) btnTunnel.className = 'flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400 hover:text-white';
+                if (badgeMode) {
+                    badgeMode.textContent = 'RÉSEAU LOCAL (WI-FI LAN)';
+                    badgeMode.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+                }
+                if (tunnelPanel) tunnelPanel.classList.add('hidden');
+                if (lanPanel) lanPanel.classList.remove('hidden');
+                if (qrDesc) qrDesc.textContent = "Connectez votre smartphone au même réseau Wi-Fi, puis scannez ce QR Code.";
+            }
+            updateConnectionSnippets();
+        }
+
+        function updateTunnelUI(tunnel, publicUrl) {
+            const ind = document.getElementById('tunnel-indicator');
+            const dot = document.getElementById('tunnel-dot');
+            const txt = document.getElementById('tunnel-header-text');
+            const statusDot = document.getElementById('tunnel-status-dot');
+            const statusTxt = document.getElementById('tunnel-status-text');
+            const urlDisp = document.getElementById('tunnel-url-display');
+            const provSelect = document.getElementById('tunnel-provider-select');
+
+            const url = publicUrl || (tunnel ? tunnel.public_url : null);
+            currentTunnelUrl = url || '';
+
+            if (tunnel && tunnel.configured_provider && provSelect && !provSelect.matches(':focus')) {
+                provSelect.value = tunnel.configured_provider;
+                onTunnelProviderChange();
+            }
+
+            if (url && url.startsWith('http')) {
+                if (ind) ind.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-xs text-cyan-400 font-medium cursor-pointer hover:bg-cyan-500/20 transition';
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-cyan-400 pulse-online';
+                if (txt) txt.textContent = `Tunnel: ${url.replace(/^https?:\/\//, '')}`;
+                
+                if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 pulse-online';
+                if (statusTxt) statusTxt.textContent = `Connecté (${(tunnel && tunnel.provider) || 'HTTPS'})`;
+                if (urlDisp) urlDisp.textContent = url;
+            } else {
+                if (ind) ind.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs text-slate-400 font-medium cursor-pointer hover:bg-slate-700 transition';
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                if (txt) txt.textContent = 'Tunnel en attente...';
+
+                if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                if (statusTxt) statusTxt.textContent = 'En négociation...';
+                if (urlDisp) urlDisp.textContent = 'Négociation du tunnel en cours...';
+            }
+            updateConnectionSnippets();
+        }
+
+        function copyTunnelUrl() {
+            if (currentTunnelUrl) {
+                copyToClipboard(currentTunnelUrl);
+            } else {
+                switchTab('mobile-qr');
+            }
+        }
+
+        function onTunnelProviderChange() {
+            const provSelect = document.getElementById('tunnel-provider-select');
+            if (!provSelect) return;
+            const prov = provSelect.value;
+            const ngrokContainer = document.getElementById('ngrok-token-container');
+            const zeroInfo = document.getElementById('zero-config-info');
+            if (prov === 'ngrok') {
+                if (ngrokContainer) ngrokContainer.classList.remove('hidden');
+                if (zeroInfo) zeroInfo.classList.add('hidden');
+            } else {
+                if (ngrokContainer) ngrokContainer.classList.add('hidden');
+                if (zeroInfo) zeroInfo.classList.remove('hidden');
+            }
+        }
+
+        async function applyTunnelSettings() {
+            const prov = document.getElementById('tunnel-provider-select').value;
+            const token = document.getElementById('ngrok-token-input').value;
+            const btn = document.getElementById('btn-save-tunnel');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Application...';
+
+            try {
+                const res = await fetch('/api/tunnel/configure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: prov, ngrok_authtoken: token })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast('✅ Configuration du tunnel enregistrée !', 'emerald');
+                    updateTunnelUI(data.tunnel, data.url);
+                } else {
+                    showToast('❌ Erreur lors de la configuration du tunnel', 'rose');
+                }
+            } catch (e) {
+                showToast('❌ Erreur : ' + e, 'rose');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-arrows-rotate mr-1"></i> Appliquer & Relancer';
+                refreshCluster();
+            }
+        }
+
+        function updateLanIps(ips, masterIp) {
+            availableIps = ips || [];
+            const select = document.getElementById('lan-ip-select');
+            if (!select) return;
+
+            const prevVal = select.value;
+            select.innerHTML = '';
+            availableIps.forEach(ip => {
+                const opt = document.createElement('option');
+                opt.value = ip;
+                opt.textContent = `${ip} (Port 8000)`;
+                select.appendChild(opt);
+            });
+
+            if (prevVal && availableIps.includes(prevVal)) {
+                select.value = prevVal;
+                currentMasterIp = prevVal;
+            } else if (masterIp && availableIps.includes(masterIp)) {
+                select.value = masterIp;
+                currentMasterIp = masterIp;
+            } else if (availableIps.length > 0) {
+                select.value = availableIps[0];
+                currentMasterIp = availableIps[0];
+            }
+        }
+
+        function onLanIpSelect(val) {
+            currentMasterIp = val;
+            updateConnectionSnippets();
+        }
+
+        function getActiveBaseUrl() {
+            if (currentConnMode === 'tunnel' && currentTunnelUrl && currentTunnelUrl.startsWith('http')) {
+                return currentTunnelUrl.replace(/\/$/, '');
+            }
+            if (currentMasterIp && currentMasterIp !== '127.0.0.1') {
+                return `http://${currentMasterIp}:8000`;
+            }
+            const h = window.location.hostname;
+            if (h && h !== 'localhost' && h !== '127.0.0.1') {
+                return `http://${h}:${window.location.port || '8000'}`;
+            }
+            return 'http://localhost:8000';
+        }
+
+        function updateConnectionSnippets() {
+            const baseUrl = getActiveBaseUrl();
+            
+            const mobUrl = document.getElementById('mobile-url-display');
+            const mobLink = document.getElementById('mobile-url-link');
+            if (mobUrl) mobUrl.textContent = baseUrl;
+            if (mobLink) mobLink.href = baseUrl;
+
+            const cmdUbuntu = document.getElementById('cmd-ubuntu-code');
+            if (cmdUbuntu) cmdUbuntu.textContent = `curl -sSL ${baseUrl}/join | bash`;
+
+            const cmdTermux = document.getElementById('cmd-termux-code');
+            if (cmdTermux) cmdTermux.textContent = `pkg update -y && pkg install -y python curl && curl -sSL ${baseUrl}/join | bash`;
+
+            const cmdWindows = document.getElementById('cmd-windows-code');
+            if (cmdWindows) cmdWindows.textContent = `irm ${baseUrl}/join.ps1 | iex`;
+
+            const cmdCurl = document.getElementById('cmd-curl-code');
+            if (cmdCurl) cmdCurl.textContent = `curl -s ${baseUrl}/api/overview`;
+
+            setupQR(baseUrl);
+        }
+
+        function setupQR(targetUrl = null) {
+            const fullUrl = targetUrl || getActiveBaseUrl();
+            const qrBox = document.getElementById('qrcode-box');
+            if (qrBox && typeof QRCode !== 'undefined') {
+                qrBox.innerHTML = '';
+                new QRCode(qrBox, {
+                    text: fullUrl,
+                    width: 160,
+                    height: 160,
+                    colorDark: '#070a12',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+        }
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('📋 Copié dans le presse-papier !', 'indigo');
+                }).catch(() => fallbackCopy(text));
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function copySnippet(elementId) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                copyToClipboard(el.textContent.trim());
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('📋 Copié dans le presse-papier !', 'indigo');
+            } catch (err) {
+                showToast('❌ Échec de la copie', 'rose');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // Toast Notification
+        function showToast(text, color = 'indigo') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-3.5 rounded-xl bg-slate-900 border border-${color}-500/40 shadow-xl text-xs text-white flex items-center space-x-2 pointer-events-auto transition duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid fa-bell text-${color}-400"></i><span>${text}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

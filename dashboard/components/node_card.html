@@ -1,0 +1,15 @@
+<!-- Template Node Card Component -->
+<div class="glass-card rounded-2xl p-5 space-y-4">
+    <div class="flex items-start justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-xl">
+                <i class="{{os_icon}}"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-white text-sm">{{hostname}}</h4>
+                <p class="text-xs text-slate-400 font-mono">{{ip_address}} &bull; {{os_type}}</p>
+            </div>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">EN LIGNE</span>
+    </div>
+</div>

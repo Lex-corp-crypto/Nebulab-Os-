@@ -1,0 +1,21 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY dashboard/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY dashboard/ .
+
+# Build the application (if needed)
+RUN npm run build 2>/dev/null || echo "No build step needed or failed - continuing"
+
+# Expose port
+EXPOSE 3000
+
+# Command to run the dashboard
+CMD ["npm", "start"]

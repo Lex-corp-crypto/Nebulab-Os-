@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
+COPY main_api.py .
+COPY database.py .
+COPY auth_manager.py .
+COPY job_manager.py .
+COPY websocket_manager.py .
+COPY alerting_system.py .
+COPY file_transfer.py .
+COPY service_discovery.py .
+COPY health_checker.py .
+COPY dashboard/ ./dashboard/
+
+# Create data dir
+RUN mkdir -p /app/data && chmod 777 /app/data
+
+EXPOSE 8000 5354/udp
+
+CMD ["python", "main_api.py"]
