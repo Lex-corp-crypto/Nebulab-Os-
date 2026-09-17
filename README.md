@@ -2,7 +2,7 @@
 
 📖 **English version** | **Version française** : [Cliquez ici](#french-version)
 
-**NebulaLab OS** is a complete and modern platform for orchestration, monitoring, and distributed execution for heterogeneous multi-device clusters (**Pop!_OS**, **Ubuntu**, **Windows**, **Android/Termux**, **iOS**, **Raspberry Pi**, **Debian** and Docker containers).
+**NebulaLab OS** is a complete and modern platform for orchestration, monitoring, and distributed execution for heterogeneous multi-device clusters (**LINUX**, **Ubuntu**, **Windows**, **Android/Termux**, **iOS**, **Raspberry Pi**, **Debian** and Docker containers).
 
 ---
 ## ⚡ Developed & Integrated Features
@@ -35,7 +35,7 @@ You can run **3 or 4 devices (and even more)** simultaneously:
        ┌────────────────────────────┼────────────────────────────┼────────────────────────────┐
        │                            │                            │                            │
 ┌──────▼───────┐             ┌──────▼───────┐             ┌──────▼───────┐             ┌──────▼───────┐
-│  Pop!_OS PC  │             │  Ubuntu PC   │             │  Smartphone  │             │  PC Windows  │
+│  any linux PC  │             │  Ubuntu PC   │             │  Smartphone  │             │  PC Windows  │
 │  (Node #1)   │             │  (Node #2)   │             │ (PWA/Termux) │             │ (PowerShell) │
 │ Master/Agent │             │ Agent Daemon │             │  (Node #3)   │             │  (Node #4)   │
 └──────────────┘             └──────────────┘             └──────────────┘             └──────────────┘
@@ -67,7 +67,7 @@ docker compose up -d
 ---
 ## 🧪 Quick Connection Guide (Zero IP Entry / Zero Port)
 
-### 1. Device #1: Pop!_OS PC (Master + Main Node)
+### 1. Device #1: ANY LINUX PC (Master + Main Node)
 On your Master PC:
 ```bash
 ./run_local.sh
@@ -194,7 +194,7 @@ distributed_linux_lab/
 <a name="french-version"></a>
 # 🌌 NebulaLab OS (Distributed Linux Lab & HomeLab Cloud)
 
-**NebulaLab OS** est une plateforme complète et moderne d'orchestration, de surveillance et d'exécution distribuée pour clusters multi-appareils hétérogènes (**Pop!_OS**, **Ubuntu**, **Windows**, **Android/Termux**, **iOS**, **Raspberry Pi**, **Debian** et conteneurs **Docker**).
+**NebulaLab OS** est une plateforme complète et moderne d'orchestration, de surveillance et d'exécution distribuée pour clusters multi-appareils hétérogènes (**LINUX**, **Ubuntu**, **Windows**, **Android/Termux**, **iOS**, **Raspberry Pi**, **Debian** et conteneurs **Docker**).
 
 ---
 ## ⚡ Fonctionnalités Développées & Intégrées
@@ -226,7 +226,7 @@ Vous pouvez faire tourner vos **3 ou 4 appareils (et bien plus) tous en même te
        ┌────────────────────────────┼────────────────────────────┼────────────────────────────┐
        │                            │                            │                            │
 ┌──────▼───────┐             ┌──────▼───────┐             ┌──────▼───────┐             ┌──────▼───────┐
-│  Pop!_OS PC  │             │  Ubuntu PC   │             │  Smartphone  │             │  PC Windows  │
+│  any linux PC  │             │  Ubuntu PC   │             │  Smartphone  │             │  PC Windows  │
 │  (Nœud #1)   │             │  (Nœud #2)   │             │ (PWA/Termux) │             │ (PowerShell) │
 │ Master/Agent │             │ Agent Daemon │             │  (Nœud #3)   │             │  (Nœud #4)   │
 └──────────────┘             └──────────────┘             └──────────────┘             └──────────────┘
